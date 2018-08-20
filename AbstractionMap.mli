@@ -114,7 +114,9 @@ val createAbstractionMap : Graph.t -> abstractionMap
 val fold: (Graph.Vertex.t -> AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a -> 'a
 
 (** Returns the number of abstract nodes *)
-val size: abstractionMap -> key
+val size: abstractionMap -> int
 
+(** [normalize f] returns f with indices reordered to be contigious*)
+val normalize: abstractionMap -> unit
   
 

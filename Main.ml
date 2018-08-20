@@ -32,27 +32,19 @@ let buildGraph (ds: declarations) : Graph.t =
 
                 
 let main =
-  Printf.printf "entering main\n";
   let file = Sys.argv.(1) in
-  (* let source = UInt32.of_string (Sys.argv.(2)) in  *)
-  (* let dst = UInt32.of_string (Sys.argv.(3)) in *)
-  let source = UInt32.of_int 14 in
-  let dst = UInt32.zero in
-  Printf.printf "parsing...\n";
-  print_newline ();
+  let source = UInt32.of_string (Sys.argv.(2)) in
+  let dst = UInt32.of_string (Sys.argv.(3)) in
   let ds, info = Input.parse file in
-  Printf.printf "building...\n";
-  print_newline ();
   let g = buildGraph ds in
-  (* let goal = Printf.sprintf "Reachability of %s from %s" Sys.argv.(3) Sys.argv.(2) in *)
-  let goal = Printf.sprintf "Reachability of 0 from 14" in
-  Printf.printf "builded\n";
-  print_newline ();
-  let f = Abstraction.findAbstraction g UInt32.zero in
-  AbstractionMap.printAbstractGroups f
-  
-  (* match abstractionLoop g source dst false with *)
-  (* | Yes -> show_message "Success" T.Green goal *)
-  (* | No (failed, _) -> *)
-  (*    show_message ("Impossible with failures: " ^ (printEdges failed "\n")) T.Red goal *)
+  let goal = Printf.sprintf "Reachability of %s from %s" Sys.argv.(3) Sys.argv.(2) in
+  (* let goal = Printf.sprintf "Reachability of 0 from 14" in *)
+  (* Printf.printf "builded\n"; *)
+  (* print_newline (); *)
+  (* let f = Abstraction.findAbstraction g UInt32.zero in *)
+  (* Printf.printf "%s" (AbstractionMap.printAbstractGroups f "\n") *)  
+  match abstractionLoop g source dst true with
+  | Yes -> show_message "Success" T.Green goal
+  | No (failed, _) ->
+     show_message ("Impossible with failures: " ^ (printEdges failed "\n")) T.Red goal
 

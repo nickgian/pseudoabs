@@ -59,18 +59,13 @@ let getGroupRepresentative (f: abstractionMap) (u: AbstractNode.t) : Vertex.t =
 let getGroupId (f: abstractionMap) (u: AbstractNode.t) : key =
   getId f (getGroupRepresentative f u)
 
-
 let partitionNode (f: abstractionMap) (newId: key) (u: Vertex.t) : unit =
   let _ =  match getIdPartial f u with
     | Some idx ->
        let us = getGroupById f idx in
        let newUs = AbstractNode.remove u us in
        if AbstractNode.is_empty newUs then
-         begin
-           Printf.printf "this case happens..";
-           print_newline ();
-           f.absGroups <- GroupMap.remove idx (f.absGroups) (* can this case happen?*)
-         end
+           f.absGroups <- GroupMap.remove idx (f.absGroups)
        else
          f.absGroups <- GroupMap.add idx newUs (f.absGroups)
     | None -> ()
@@ -104,8 +99,18 @@ let createAbstractionMap g : abstractionMap =
 let fold (g: Vertex.t -> AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
   VertexMap.fold (fun u idx acc -> g u (getGroupById f idx) acc) f.groupId acc
 
-(* Do we ever remove an id? *) 
-let size (f: abstractionMap) : key =
-  f.nextId
+let size (f: abstractionMap) : int =
+  VertexMap.cardinal f.groupId
 
-
+let normalize (f: abstractionMap) =
+  let (nextIdN, groupIdN, absGroupsN) =
+    VertexMap.fold (fun u id (nextIdN, groupIdN, absGroupsN) ->
+        (UInt32.add nextIdN UInt32.one,
+         VertexMap.add u nextIdN groupIdN,
+         GroupMap.add nextIdN (getGroup f u) absGroupsN))
+                   f.groupId (UInt32.zero, VertexMap.empty, GroupMap.empty)
+  in
+  f.absGroups <- absGroupsN;
+  f.groupId <- groupIdN;
+  f.nextId <- nextIdN
+    

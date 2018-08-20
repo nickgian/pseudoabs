@@ -53,7 +53,7 @@ let rec abstractionLoop (f: abstractionMap) (g: Graph.t) =
                  refineAbstraction g facc us
                else
                  facc) f f in
-  if (size f = size f') then f'
+  if (size f = size f') then (normalize f'; f')
   else abstractionLoop f' g
   
 let findAbstraction (g : Graph.t) (d: Vertex.t) : abstractionMap =
@@ -144,13 +144,13 @@ let addAbstractEdges (g: Graph.t) (f: abstractionMap) (ag: Graph.t)
                      (uhat: AbstractNode.t) : Graph.t =
   let repru = getGroupRepresentative f uhat in
   let ns = neighbors g repru in
-  let nshat = List.map (fun v -> (getGroupId f uhat, getGroupId f (getGroup f v))) ns in
+  let nshat = List.map (fun v -> (getGroupId f uhat, getId f v)) ns in
   add_edges ag nshat
 
-(* Assumes that abstract group ids are contiguous *)
+(* Requires that abstract group ids are contiguous, hence normalizes them *)
 let buildAbstractGraph (g: Graph.t) (f: abstractionMap) : Graph.t =
   let groups = getAbstractGroups f in
-  let ag = Graph.create (size f) in
+  let ag = Graph.create (UInt32.of_int (size f)) in
   List.fold_left (fun acc uhat -> addAbstractEdges g f acc uhat) ag groups  
 
 

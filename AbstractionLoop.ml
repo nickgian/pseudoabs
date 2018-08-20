@@ -72,7 +72,6 @@ let abstractionLoop_debug =
       show_message groups T.Blue "Abstract groups: ";
       incr iterationNumber;
       show_message (string_of_int !iterationNumber) T.Blue "Iteration Number: ";
-      print_newline ();
     end
   
 let abstractionLoop (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : result =
@@ -95,10 +94,6 @@ let abstractionLoop (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : 
            loop f'
          end
   in
-  Printf.printf "does findabstraction fail?";
-  print_newline();
   let f = findAbstraction g d in
-  Printf.printf "find abstraction works\n";
-  print_newline();
   loop f
 
