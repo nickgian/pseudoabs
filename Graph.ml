@@ -17,6 +17,8 @@ module Edge = struct
     else UInt32.compare w1 w2
 end
 
+module EdgeSet = Set.Make(Edge)
+
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
 let find_opt v m = try Some (VertexMap.find v m) with Not_found -> None
 
@@ -106,6 +108,19 @@ let neighbors (m, i) v =
   good_vertex (m, i) v ;
   match find_opt v m with None -> [] | Some ns -> ns
 
+let printEdge (u,v) =
+  Printf.sprintf "(%s,%s)" (UInt32.to_string u) (UInt32.to_string v)
+
+let printEdges (es : EdgeSet.t) (sep : string) =
+  let rec loop es =
+    match es with
+    | [] ->
+       ""
+    | [e] -> printEdge e
+    | e :: es -> (printEdge e) ^ sep ^ loop es
+  in
+  loop (EdgeSet.elements es)
+                                                
 let print g =
   Printf.printf "%d\n" (UInt32.to_int (num_vertices g)) ;
   List.iter

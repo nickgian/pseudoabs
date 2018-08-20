@@ -1,4 +1,4 @@
-PKGS = -pkgs ANSITerminal,integers
+PKGS = -pkgs ANSITerminal,integers,batteries
 BUILD = ocamlbuild -use-ocamlfind -use-menhir -r $(PKGS)
 MLFILES= *.ml *.mli \
 

@@ -7,13 +7,13 @@ module AbstractNode =
   struct
     include VertexSet
     let printAbstractNode (us : t) =
-      let rec printAux lst =
+      let rec printAux lst acc =
         match lst with
-        | [] -> ()
-        | [u] -> Printf.printf "%d" (UInt32.to_int u)
-        | u :: lst -> Printf.printf "%d," (UInt32.to_int u); printAux lst
+        | [] -> "}" :: acc
+        | [u] -> printAux [] ((Printf.sprintf "%d" (UInt32.to_int u)) :: acc)
+        | u :: lst -> printAux lst ((Printf.sprintf "%d," (UInt32.to_int u)) :: acc)
       in
-      Printf.printf "{"; printAux (elements us); Printf.printf "}\n"
+      String.concat "" (List.rev (printAux (elements us) ["{"]))
 
     let randomSplit (us : t) : (t * t) =
       let u1, u2, _ =
@@ -66,7 +66,11 @@ let partitionNode (f: abstractionMap) (newId: key) (u: Vertex.t) : unit =
        let us = getGroupById f idx in
        let newUs = AbstractNode.remove u us in
        if AbstractNode.is_empty newUs then
-         f.absGroups <- GroupMap.remove idx (f.absGroups) (* can this case happen?*)
+         begin
+           Printf.printf "this case happens..";
+           print_newline ();
+           f.absGroups <- GroupMap.remove idx (f.absGroups) (* can this case happen?*)
+         end
        else
          f.absGroups <- GroupMap.add idx newUs (f.absGroups)
     | None -> ()
@@ -86,6 +90,11 @@ let split (f: abstractionMap) (us: AbstractNode.t) : abstractionMap =
 
 let getAbstractGroups (f: abstractionMap) : AbstractNode.t list =
   List.map (fun (k,v) -> v) (GroupMap.bindings f.absGroups)
+
+let printAbstractGroups (f: abstractionMap) (sep: string) : string =
+  List.fold_left (fun acc us -> (AbstractNode.printAbstractNode us) ^ sep ^ acc)
+                 "" (getAbstractGroups f)
+
 
 let createAbstractionMap g : abstractionMap =
   let f = { absGroups = GroupMap.empty; groupId = VertexMap.empty; nextId = UInt32.zero} in

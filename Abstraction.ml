@@ -1,6 +1,8 @@
 open Graph
 open AbstractionMap
 open Unsigned
+open Console
+open Debug
 
 module AbstractNodeSet : Set.S with type elt := AbstractNode.t = Set.Make(AbstractNode)
 module AbstractNodesMap : Map.S with type key := AbstractNodeSet.t = Map.Make(AbstractNodeSet)
@@ -14,6 +16,24 @@ let groupKeysByValue (umap: AbstractNodeSet.t VertexMap.t) : AbstractNodeSet.t =
                    umap AbstractNodesMap.empty in
   AbstractNodesMap.fold (fun _ v acc -> AbstractNodeSet.add v acc)
                         reverseMap AbstractNodeSet.empty  
+                                                                   
+(* let groupKeysByValue (umap: AbstractNodeSet.t VertexMap.t) : AbstractNodeSet.t = *)
+(*   (\* add u to the set that uhat maps to *\) *)
+(*   let addu (uhat : AbstractNodeSet.t) (u : Vertex.t) *)
+(*            (reverseMap: AbstractNode.t AbstractNodesMap.t) = *)
+(*     AbstractNodesMap.update uhat *)
+(*                             (fun us -> match us with *)
+(*                                        | None -> Some (AbstractNode.singleton u) *)
+(*                                        | Some us -> Some (AbstractNode.add u us)) reverseMap *)
+(*   in *)
+(*   (\* reverse the map, constructing a new map that maps abstract nodes to *)
+(*    set of concrete nodes *\) *)
+(*   let reverseMap = VertexMap.fold (fun u uhat acc -> addu uhat u acc) umap *)
+(*                                   AbstractNodesMap.empty *)
+(*   in *)
+(*   (\* finally create a set that contains the new abstract nodes *\) *)
+(*   AbstractNodesMap.fold (fun _ v acc -> AbstractNodeSet.add v acc) *)
+(*                         reverseMap AbstractNodeSet.empty   *)
                        
 let refineAbstraction (g: Graph.t) (f: abstractionMap) (us: AbstractNode.t) : abstractionMap =
   let refineOne (u : Vertex.t) (umap : AbstractNodeSet.t VertexMap.t) =
@@ -93,11 +113,19 @@ let bestSplitForFailures (g : Graph.t) (f: abstractionMap) (uid: key) (path: key
   loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
 
 
+let splitSet_debug us =
+  if !debugAbstraction then
+    show_message (AbstractNode.printAbstractNode us) T.Blue "splitting set"
+  
 (* Repeatedly split to create the abstract nodes in [uss] *)
 let splitSet f (uss : AbstractNodeSet.t) : abstractionMap =
-  AbstractNodeSet.fold (fun us f' -> Printf.printf "for debug:";
-                                     AbstractNode.printAbstractNode us; split f' us) uss f
+  AbstractNodeSet.fold (fun us f' -> splitSet_debug us; split f' us) uss f
 
+let refineForFailures_debug (f: abstractionMap) =
+  if !debugAbstraction then
+    show_message (printAbstractGroups f "\n") T.Blue
+                 "Abstract groups after refine for failures: "
+  
 (* TODO: Refine for failures does not need to take the transfer
    function into consideration when refining hence using the same
    function as findAbstraction is not the best for
@@ -109,8 +137,7 @@ let refineForFailures (g: Graph.t) (f: abstractionMap)
   | (uss, _) ->
      let f' = splitSet f uss in
      let f'' =  abstractionLoop f' g in
-     Printf.printf "abstract groups after splitting\n";
-     List.iter (fun us -> AbstractNode.printAbstractNode us) (getAbstractGroups f'');
+     refineForFailures_debug f'';
      f''
 
 let addAbstractEdges (g: Graph.t) (f: abstractionMap) (ag: Graph.t)
@@ -125,3 +152,18 @@ let buildAbstractGraph (g: Graph.t) (f: abstractionMap) : Graph.t =
   let groups = getAbstractGroups f in
   let ag = Graph.create (size f) in
   List.fold_left (fun acc uhat -> addAbstractEdges g f acc uhat) ag groups  
+
+
+let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
+  let (uhat, vhat) = ehat in
+  let us = getGroupById f uhat in (* get nodes represented by uhat *)
+  let getNeighborsInVhat u =
+    BatList.filter_map (fun v -> if (getId f v) = vhat then
+                                   Some (u,v) else None) (neighbors g u)
+    |> EdgeSet.of_list
+  in
+  AbstractNode.fold
+    (fun u acc -> EdgeSet.union (getNeighborsInVhat u) acc) us EdgeSet.empty
+  
+let getEdgeMultiplicity (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : int =
+  EdgeSet.cardinal (abstractToConcreteEdge g f ehat)

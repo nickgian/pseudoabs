@@ -8,7 +8,7 @@ let get_position_opt idx info =
     (fun i (s, e) -> if idx >= s && idx <= e then position := Some (i, idx - s))
     info.linenums ;
   !position
-
+  
 let show_message msg color label =
   T.print_string [] "\n" ;
   T.print_string [T.Foreground color; T.Bold] (label ^ ": ") ;

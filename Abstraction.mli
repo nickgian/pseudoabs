@@ -116,3 +116,13 @@ val refineForFailures :
 (** Given a concrete graph and an abstraction function creates the
    corresponding abstract graph*)
 val buildAbstractGraph : Graph.t -> AbstractionMap.abstractionMap -> Graph.t
+
+(** [abstractToConcreteEdge g f ehat] returns the set of concrete
+   edges that map to the abstract edge [ehat] *)
+val abstractToConcreteEdge: Graph.t -> AbstractionMap.abstractionMap ->
+                             Graph.Edge.t -> Graph.EdgeSet.t
+
+(** [getEdgeMultiplicity g f ehat] returns the number of concrete
+   edges that map to the abstract edge [ehat] *)  
+val getEdgeMultiplicity: Graph.t -> AbstractionMap.abstractionMap ->
+                         Graph.Edge.t -> int
