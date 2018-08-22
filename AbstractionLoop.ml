@@ -7,6 +7,7 @@ open Routing
 open BatLazyList
 open Console
 open Debug
+open Vertex
    
 type result = Yes | No of failureSet * routingMap
                         
@@ -33,10 +34,11 @@ let getReachability (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : 
  * 2. Choose failure (u,v) such that u can reach the destination and v cannot.
  * 3. Choose u with the biggest cost (thus distance from the destination). This is good
       for our splitting based on the path. *)
-let findOptimalFailure (f: abstractionMap) (failed : EdgeSet.t) (sol : routingMap) : Vertex.t =
+let findOptimalFailure (f: abstractionMap) (failedHat : EdgeSet.t)
+                       (sol : routingMap) : Vertex.t =
   let candidate1 =
-    EdgeSet.filter (fun (u,v) -> (AbstractNode.cardinal (getGroupById f u)) > 1)
-                   failed in
+    EdgeSet.filter (fun (u,v) -> (AbstractNode.cardinal (getGroupById f (vid u))) > 1)
+                   failedHat in
   let candidate2 =
     EdgeSet.filter (fun (u,v) -> (VertexMap.mem u sol)
                                  && (not (VertexMap.mem v sol))) candidate1 in
@@ -52,7 +54,7 @@ let findOptimalFailure (f: abstractionMap) (failed : EdgeSet.t) (sol : routingMa
      maxu
   | true ->
      if EdgeSet.is_empty candidate1 then
-       snd (EdgeSet.choose failed) (* if all our heuristics fail *)
+       snd (EdgeSet.choose failedHat) (* if all our heuristics fail *)
      else
        fst (EdgeSet.choose candidate1)
 
@@ -62,27 +64,25 @@ let mapFailedSet (g: Graph.t) (f: abstractionMap) (failed: failureSet) : failure
 
 let abstractionLoop_debug =
   let iterationNumber = ref 0 in
-  fun (f: abstractionMap) ->
+  fun (f: abstractionMap) (failed: EdgeSet.t)->
   if !(Debug.debugAbstractionLoop) then
     begin
-      let groups =
-        List.fold_left (fun acc us -> (AbstractNode.printAbstractNode us) ^ "\n" ^ acc)
-                       "" (getAbstractGroups f)
-      in
-      show_message groups T.Blue "Abstract groups: ";
+      let groups = printAbstractGroups f "\n" in
       incr iterationNumber;
-      show_message (string_of_int !iterationNumber) T.Blue "Iteration Number: ";
+      show_message (string_of_int !iterationNumber) T.Blue "Iteration Number ";
+      show_message (printEdges failed "\n") T.Blue "Failed Edges";
+      show_message groups T.Blue "Abstract groups";
     end
   
 let abstractionLoop (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : result =
   let rec loop (f: abstractionMap) =
-    abstractionLoop_debug f;
     let ag = buildAbstractGraph g f in
-    match getReachability ag (getId f s) (getId f d) failures with
+    match getReachability ag (getId f s, vname s) (getId f d, vname d) failures with
     | Yes -> Yes
     | No (failed, sol) ->
        let concreteFailures = mapFailedSet g f failed in
        let numberOfFailures = EdgeSet.cardinal concreteFailures in
+       abstractionLoop_debug f concreteFailures;
        if (numberOfFailures <= 1) then (* simple case*)
          No (concreteFailures, sol)
        else 

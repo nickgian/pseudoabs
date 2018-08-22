@@ -26,7 +26,9 @@ rule token = parse
   | "let"        { LET (position lexbuf) } 
   | "edges"      { EDGES (position lexbuf) }
   | "nodes"      { NODES (position lexbuf) }
+  | "role"       { ROLE (position lexbuf) }
   | num as n     { NUM (position lexbuf, Unsigned.UInt32.of_string n) }
+  | id as s      { ID (position lexbuf, s) }	   
   | "-"          { SUB (position lexbuf) }
   | "="          { EQ (position lexbuf) }
   | ";"          { SEMI (position lexbuf) }

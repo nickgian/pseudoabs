@@ -47,24 +47,24 @@ let refineAbstraction (g: Graph.t) (f: abstractionMap) (us: AbstractNode.t) : ab
   let vmap = AbstractNode.fold (fun u acc -> refineOne u acc) us VertexMap.empty in
   AbstractNodeSet.fold (fun us f' -> split f' us) (groupKeysByValue vmap) f
 
-let rec abstractionLoop (f: abstractionMap) (g: Graph.t) =
+let rec abstraction (f: abstractionMap) (g: Graph.t) =
   let f' = fold (fun _ us facc ->
                if (VertexSet.cardinal us > 1) then
                  refineAbstraction g facc us
                else
                  facc) f f in
-  if (size f = size f') then (normalize f'; f')
-  else abstractionLoop f' g
+  if (size f = size f') then normalize f'
+  else abstraction f' g
   
 let findAbstraction (g : Graph.t) (d: Vertex.t) : abstractionMap =
   let f = split (createAbstractionMap g) (VertexSet.singleton d) in
-  abstractionLoop f g
+  abstraction f g
 
 type splittings = Mesh | Groups of AbstractNodeSet.t
                                  
-let splitForFailures (uhat : AbstractNode.t) (vhat : AbstractNode.t) (m,i) = 
+let splitForFailures (uhat : AbstractNode.t) (vhat : AbstractNode.t) g = 
   let addNeighbor u =
-    let neighborsOfu = neighbors (m,i) u in
+    let neighborsOfu = neighbors g u in
     let neighborsOfUinV = List.filter (fun v -> AbstractNode.mem v vhat) neighborsOfu in
     AbstractNodeSet.singleton (AbstractNode.of_list neighborsOfUinV)
                               (* Doing this, just to reuse groupKeysByValues, for now*)
@@ -124,7 +124,7 @@ let splitSet f (uss : AbstractNodeSet.t) : abstractionMap =
 let refineForFailures_debug (f: abstractionMap) =
   if !debugAbstraction then
     show_message (printAbstractGroups f "\n") T.Blue
-                 "Abstract groups after refine for failures: "
+                 "Abstract groups after refine for failures "
   
 (* TODO: Refine for failures does not need to take the transfer
    function into consideration when refining hence using the same
@@ -132,11 +132,11 @@ let refineForFailures_debug (f: abstractionMap) =
    efficiency. Optimize that when we add reasoning about transfer
    functions *)
 let refineForFailures (g: Graph.t) (f: abstractionMap)
-                      (uid: key) (path: key list) : abstractionMap =
+                      (uid: abstrId) (path: abstrId list) : abstractionMap =
   match bestSplitForFailures g f uid path with
   | (uss, _) ->
      let f' = splitSet f uss in
-     let f'' =  abstractionLoop f' g in
+     let f'' =  abstraction f' g in
      refineForFailures_debug f'';
      f''
 
@@ -144,7 +144,8 @@ let addAbstractEdges (g: Graph.t) (f: abstractionMap) (ag: Graph.t)
                      (uhat: AbstractNode.t) : Graph.t =
   let repru = getGroupRepresentative f uhat in
   let ns = neighbors g repru in
-  let nshat = List.map (fun v -> (getGroupId f uhat, getId f v)) ns in
+  let unode = (getGroupId f uhat, vname repru) in (*TODO: construct the name from all elements*)
+  let nshat = List.map (fun v -> (unode, (getId f v, vname v))) ns in
   add_edges ag nshat
 
 (* Requires that abstract group ids are contiguous, hence normalizes them *)

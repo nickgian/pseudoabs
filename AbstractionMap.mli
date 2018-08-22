@@ -117,6 +117,6 @@ val fold: (Graph.Vertex.t -> AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a
 val size: abstractionMap -> int
 
 (** [normalize f] returns f with indices reordered to be contigious*)
-val normalize: abstractionMap -> unit
+val normalize: abstractionMap -> abstractionMap
   
 

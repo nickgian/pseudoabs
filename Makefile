@@ -1,5 +1,5 @@
 PKGS = -pkgs ANSITerminal,integers,batteries
-BUILD = ocamlbuild -use-ocamlfind -use-menhir -r $(PKGS)
+BUILD = ocamlbuild -tag 'debug'  -use-ocamlfind -use-menhir -r $(PKGS)
 MLFILES= *.ml *.mli \
 
 default:  Main

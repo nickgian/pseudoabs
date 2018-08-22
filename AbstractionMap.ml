@@ -1,5 +1,6 @@
 open Graph
 open Unsigned
+open Vertex
 
 module VertexSet = Set.Make(Vertex)
    
@@ -10,8 +11,8 @@ module AbstractNode =
       let rec printAux lst acc =
         match lst with
         | [] -> "}" :: acc
-        | [u] -> printAux [] ((Printf.sprintf "%d" (UInt32.to_int u)) :: acc)
-        | u :: lst -> printAux lst ((Printf.sprintf "%d," (UInt32.to_int u)) :: acc)
+        | [u] -> printAux [] ((Printf.sprintf "%s" (printVertex u)) :: acc)
+        | u :: lst -> printAux lst ((Printf.sprintf "%s," (printVertex u)) :: acc)
       in
       String.concat "" (List.rev (printAux (elements us) ["{"]))
 
@@ -33,21 +34,21 @@ module UInts = struct
 end
 
 module GroupMap = Map.Make(UInts)
-type key = UInts.t
+type abstrId = UInts.t
 
 type abstractionMap =
   { mutable absGroups : AbstractNode.t GroupMap.t; (* mapping each id to a set of nodes *)
-    mutable groupId   : key VertexMap.t;           (* mapping each node to an id *)
-    mutable nextId    : key;                       (* next available id *)
+    mutable groupId   : abstrId VertexMap.t;           (* mapping each node to an id *)
+    mutable nextId    : abstrId;                       (* next available id *)
   }
 
-let getId (f: abstractionMap) (u: Vertex.t) : key =
+let getId (f: abstractionMap) (u: Vertex.t) : abstrId =
   VertexMap.find u (f.groupId)
 
-let getIdPartial (f: abstractionMap) (u: Vertex.t) : key option =
+let getIdPartial (f: abstractionMap) (u: Vertex.t) : abstrId option =
   VertexMap.find_opt u (f.groupId)
 
-let getGroupById (f: abstractionMap) (idx: key) : AbstractNode.t =
+let getGroupById (f: abstractionMap) (idx: abstrId) : AbstractNode.t =
   GroupMap.find idx (f.absGroups)
 
 let getGroup (f: abstractionMap) (u: Vertex.t) : AbstractNode.t =
@@ -56,10 +57,10 @@ let getGroup (f: abstractionMap) (u: Vertex.t) : AbstractNode.t =
 let getGroupRepresentative (f: abstractionMap) (u: AbstractNode.t) : Vertex.t =
   AbstractNode.min_elt u
   
-let getGroupId (f: abstractionMap) (u: AbstractNode.t) : key =
+let getGroupId (f: abstractionMap) (u: AbstractNode.t) : abstrId =
   getId f (getGroupRepresentative f u)
 
-let partitionNode (f: abstractionMap) (newId: key) (u: Vertex.t) : unit =
+let partitionNode (f: abstractionMap) (newId: abstrId) (u: Vertex.t) : unit =
   let _ =  match getIdPartial f u with
     | Some idx ->
        let us = getGroupById f idx in
@@ -72,7 +73,7 @@ let partitionNode (f: abstractionMap) (newId: key) (u: Vertex.t) : unit =
   in
   f.groupId <- VertexMap.add u newId (f.groupId)
     
-let partitionNodes (f: abstractionMap) (i: key) (us: AbstractNode.t) : unit =
+let partitionNodes (f: abstractionMap) (i: abstrId) (us: AbstractNode.t) : unit =
   AbstractNode.iter (fun u -> partitionNode f i u) us;
   f.absGroups <- GroupMap.add i us (f.absGroups)
 
@@ -104,13 +105,11 @@ let size (f: abstractionMap) : int =
 
 let normalize (f: abstractionMap) =
   let (nextIdN, groupIdN, absGroupsN) =
-    VertexMap.fold (fun u id (nextIdN, groupIdN, absGroupsN) ->
+    GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) ->
         (UInt32.add nextIdN UInt32.one,
-         VertexMap.add u nextIdN groupIdN,
-         GroupMap.add nextIdN (getGroup f u) absGroupsN))
-                   f.groupId (UInt32.zero, VertexMap.empty, GroupMap.empty)
+         AbstractNode.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
+         GroupMap.add nextIdN (getGroupById f id) absGroupsN))
+                   f.absGroups (UInt32.zero, VertexMap.empty, GroupMap.empty)
   in
-  f.absGroups <- absGroupsN;
-  f.groupId <- groupIdN;
-  f.nextId <- nextIdN
+  { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN}
     

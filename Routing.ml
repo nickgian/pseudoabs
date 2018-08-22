@@ -10,7 +10,7 @@ type failureSet = EdgeSet.t
 
 (* Not that routing here, does not work in the same direction as SRPs,
    e.g. it's (d,u) not (u,d) *)
-let route ((m,i): Graph.t) (d: Vertex.t) (failed: failureSet): routingMap =
+let route (g: Graph.t) (d: Vertex.t) (failed: failureSet): routingMap =
   let sol = ref (VertexMap.singleton d (None, 0)) in
   let q = Queue.create () in
   let () = Queue.push (d,0) q in
@@ -18,7 +18,7 @@ let route ((m,i): Graph.t) (d: Vertex.t) (failed: failureSet): routingMap =
   let rec explore () =
     try
       let (u,c) = Queue.pop q in
-      let ns = List.filter (fun v -> not (EdgeSet.mem (u,v) failed)) (neighbors (m, i) u) in
+      let ns = List.filter (fun v -> not (EdgeSet.mem (u,v) failed)) (neighbors g u) in
       List.iter (fun v -> if not (visited v) then
                             begin
                               sol := VertexMap.add v (Some u, c+1) !sol;
