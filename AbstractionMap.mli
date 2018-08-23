@@ -32,7 +32,7 @@ module AbstractNode :
     val printAbstractNode : t -> string
     val randomSplit : t -> t * t
   end
-module UInts : sig type t = UInt32.t val compare : 'a -> 'a -> int end
+module UInts : sig type t = UInt32.t val compare : t -> t -> int end
 module GroupMap :
   sig
     type key = UInts.t
@@ -76,7 +76,7 @@ module GroupMap :
 
 (** The type of abstraction maps *)
 type abstractionMap
-type key = UInt32.t
+type abstrId = UInt32.t
 
 (** Given an abstraction map and a node, returns its abstraction. 
     Raises [Not_found] *)
@@ -85,18 +85,18 @@ val getGroup : abstractionMap -> Graph.Vertex.t -> AbstractNode.t
 (** Given an abstraction map and a node, returns the id of the
    abstract node it belongs to.  
    Raises [Not_found] *)
-val getId : abstractionMap -> Graph.Vertex.t -> key
+val getId : abstractionMap -> Graph.Vertex.t -> abstrId
   
 (** Given an abstraction map and the id of an abstract node, returns the abstract node.
     Raises [Not_found] *)
-val getGroupById : abstractionMap -> key -> AbstractNode.t
+val getGroupById : abstractionMap -> abstrId -> AbstractNode.t
 
 (** Given an abstraction and an abstract node returns a concrete node
    that acts as the representative of all concrete nodes in this group *)
 val getGroupRepresentative: abstractionMap -> AbstractNode.t -> Graph.Vertex.t
 
 (** Given an abstraction and an abstract node returns a unique id for this abstract node*)
-val getGroupId: abstractionMap -> AbstractNode.t -> key
+val getGroupId: abstractionMap -> AbstractNode.t -> abstrId
   
 (** Split the given set of nodes to a new abstract node and return the new abstraction*)
 val split : abstractionMap -> AbstractNode.t -> abstractionMap

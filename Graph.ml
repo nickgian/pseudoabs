@@ -1,17 +1,20 @@
 open Unsigned
 
 module Vertex = struct
-  type t = UInt32.t * (string option)
+  type t =
+    {vid   : UInt32.t;
+     vname : string option;
+    }
 
-  let vid (i,s) = i
-  let vname (i,s) = s
-
-  let printVertex (i, s) =
+  let createVertex ?s:(s=None) i =
+    {vid=i; vname=s}
+    
+  let printVertex {vid=i; vname=s} =
     match s with
     | None -> Printf.sprintf "%d" (UInt32.to_int i)
-    | Some s -> Printf.sprintf "%s%d" s (UInt32.to_int i)
+    | Some s -> Printf.sprintf "%s:%d" s (UInt32.to_int i)
     
-  let compare x y = UInt32.compare (fst x) (fst y)
+  let compare x y = UInt32.compare (x.vid) (y.vid)
 end
 
 module VertexMap = Map.Make (Vertex)
@@ -20,6 +23,9 @@ module RoleMap = Map.Make(String)
 
 module Edge = struct
   type t = Vertex.t * Vertex.t
+
+  let printEdge (u,v) =
+    Printf.sprintf "(%s,%s)" (Vertex.printVertex u) (Vertex.printVertex v)
 
   let compare (v1, w1) (v2, w2) =
     if Vertex.compare v1 v2 != 0 then Vertex.compare v1 v2
@@ -46,22 +52,28 @@ let print_vertex_map elem_to_string m =
 (* a graph as adjacency list * # of vertices *)
 type t =
   { adjacency: Vertex.t list VertexMap.t;
-    roles: VertexSet.t RoleMap.t;
+    roles: (UInt32.t list) RoleMap.t;
     size: UInt32.t
   }
     
 (* create a graph with i vertices *)
+(* let create i = *)
+(*   let rec adj n acc = *)
+(*     let v = {Vertex.vid = n; Vertex.vname = None} in *)
+(*     if UInt32.zero = n then *)
+(*       VertexMap.add v [] acc *)
+(*     else *)
+(*       adj (UInt32.sub n (UInt32.one)) (VertexMap.add v [] acc) *)
+(*   in *)
+(*   { adjacency = adj (UInt32.sub i (UInt32.one)) VertexMap.empty; *)
+(*     roles = RoleMap.empty; *)
+(*     size = i } *)
+
 let create i =
-  let rec adj n acc =
-    if UInt32.zero = n then
-      VertexMap.add (n, None) [] acc
-    else
-      adj (UInt32.sub n (UInt32.one)) (VertexMap.add (n, None) [] acc)
-  in
-  { adjacency = adj (UInt32.sub i (UInt32.one)) VertexMap.empty;
+  { adjacency = VertexMap.empty;
     roles = RoleMap.empty;
     size = i }
-
+  
 (* vertices and edges *)
 let num_vertices g = g.size
 
@@ -80,8 +92,8 @@ exception BadVertex of Vertex.t
 
 let good_vertex g v =
   try
-    if UInt32.compare (Vertex.vid v) UInt32.zero < 0 ||
-         not (UInt32.compare g.size (Vertex.vid v) > 0) then
+    if UInt32.compare (v.Vertex.vid) UInt32.zero < 0 ||
+         not (UInt32.compare g.size (v.Vertex.vid) > 0) then
       raise (BadVertex v)
   with
   | BadVertex v as ex ->
@@ -105,13 +117,13 @@ let add_edge (v, w) g =
 let add_uedge (v, w) g =
   add_edge (v,w) g |>
     add_edge (w,v)
-  
+
+(* add_roles first to get names *)
 let rec add_edges g edges =
   match edges with [] -> g | e :: edges -> add_edges (add_edge e g) edges
 
 let rec add_uedges g edges =
   match edges with [] -> g | e :: edges -> add_uedges (add_uedge e g) edges
-
                                          
 (* add_edge g e adds directed edge e to g *)
 let remove_edge g (v, w) =
@@ -132,24 +144,32 @@ let neighbors g v =
   good_vertex g v ;
   match find_opt v g.adjacency with None -> [] | Some ns -> ns
 
-let printEdge (u,v) =
-  Printf.sprintf "(%s,%s)" (Vertex.printVertex u) (Vertex.printVertex v)
-
 let printEdges (es : EdgeSet.t) (sep : string) =
   let rec loop es =
     match es with
     | [] ->
        ""
-    | [e] -> printEdge e
-    | e :: es -> (printEdge e) ^ sep ^ loop es
+    | [e] -> Edge.printEdge e
+    | e :: es -> (Edge.printEdge e) ^ sep ^ loop es
   in
   loop (EdgeSet.elements es)
+  
+let add_role g (role, nodes) : t =
+  {g with roles = RoleMap.add role nodes g.roles;
+          adjacency =
+            List.fold_left (fun acc id ->
+                let node = Vertex.createVertex ~s:(Some role) id in
+                VertexMap.add node [] acc)
+          g.adjacency nodes}
 
-let add_role g (role, nodes) =
-  {g with roles = RoleMap.add role (VertexSet.of_list nodes) g.roles}
-
-let add_roles g rs =
+let add_roles g rs : t=
   List.fold_left (fun acc r -> add_role acc r) g rs
+
+let get_vertex g i =
+  if VertexMap.mem (Vertex.createVertex i) g.adjacency then
+    fst (VertexMap.find_first (fun k ->
+             Vertex.compare k {vid=i;vname=None} >= 0) g.adjacency)
+  else Vertex.createVertex i
                                                 
 let print g =
   Printf.printf "%d\n" (UInt32.to_int (num_vertices g)) ;

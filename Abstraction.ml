@@ -83,7 +83,7 @@ let splitForFailures (uhat : AbstractNode.t) (vhat : AbstractNode.t) g =
    - returns a random split with ratio 1.0 if you immediately get to a full mesh.
      TODO: no need to return a ratio of 1.0, do max_int. Also avoid enforcing invariants
      with the ratio *)
-let bestSplitForFailures (g : Graph.t) (f: abstractionMap) (uid: key) (path: key list) =
+let bestSplitForFailures (g : Graph.t) (f: abstractionMap) (uid: abstrId) (path: abstrId list) =
   let rec loop path current best =
     match path with
     | [] -> best
@@ -144,8 +144,9 @@ let addAbstractEdges (g: Graph.t) (f: abstractionMap) (ag: Graph.t)
                      (uhat: AbstractNode.t) : Graph.t =
   let repru = getGroupRepresentative f uhat in
   let ns = neighbors g repru in
-  let unode = (getGroupId f uhat, vname repru) in (*TODO: construct the name from all elements*)
-  let nshat = List.map (fun v -> (unode, (getId f v, vname v))) ns in
+  let unode = Vertex.(createVertex ~s:(repru.vname) (getGroupId f uhat)) in
+  (*TODO: construct the name from all elements*)
+  let nshat = List.map (fun v -> (unode, Vertex.(createVertex ~s:(v.vname) (getId f v)))) ns in
   add_edges ag nshat
 
 (* Requires that abstract group ids are contiguous, hence normalizes them *)
@@ -157,9 +158,9 @@ let buildAbstractGraph (g: Graph.t) (f: abstractionMap) : Graph.t =
 
 let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
   let (uhat, vhat) = ehat in
-  let us = getGroupById f uhat in (* get nodes represented by uhat *)
+  let us = getGroupById f Vertex.(uhat.vid) in (* get nodes represented by uhat *)
   let getNeighborsInVhat u =
-    BatList.filter_map (fun v -> if (getId f v) = vhat then
+    BatList.filter_map (fun v -> if (getId f v) = Vertex.(vhat.vid) then
                                    Some (u,v) else None) (neighbors g u)
     |> EdgeSet.of_list
   in

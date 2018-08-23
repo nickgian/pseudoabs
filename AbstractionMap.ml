@@ -30,7 +30,7 @@ module AbstractNode =
 module UInts = struct
   type t = UInt32.t
 
-  let compare = compare
+  let compare = UInt32.compare
 end
 
 module GroupMap = Map.Make(UInts)
@@ -38,8 +38,8 @@ type abstrId = UInts.t
 
 type abstractionMap =
   { mutable absGroups : AbstractNode.t GroupMap.t; (* mapping each id to a set of nodes *)
-    mutable groupId   : abstrId VertexMap.t;           (* mapping each node to an id *)
-    mutable nextId    : abstrId;                       (* next available id *)
+    mutable groupId   : abstrId VertexMap.t;       (* mapping each node to an id *)
+    mutable nextId    : abstrId;                   (* next available id *)
   }
 
 let getId (f: abstractionMap) (u: Vertex.t) : abstrId =

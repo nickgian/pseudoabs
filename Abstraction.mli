@@ -104,14 +104,14 @@ module AbstractNodesMap :
 val findAbstraction :
   Graph.t -> Graph.Vertex.t -> AbstractionMap.abstractionMap
 
-(** Given a concrete graph, an abstraction function, and a key of an
+(** Given a concrete graph, an abstraction function, and a abstrId of an
    abstract node to split, tries to refine the abstraction leveraging
    the given path if possible *)
 val refineForFailures :
   Graph.t ->
   AbstractionMap.abstractionMap ->
-  AbstractionMap.key ->
-  AbstractionMap.key list -> AbstractionMap.abstractionMap
+  AbstractionMap.abstrId ->
+  AbstractionMap.abstrId list -> AbstractionMap.abstractionMap
 
 (** Given a concrete graph and an abstraction function creates the
    corresponding abstract graph*)

@@ -1,0 +1,27 @@
+let nodes = 20
+
+let role T1 = {0;1}
+let role T2 = {2;3}
+let role T3 = {4;5}
+let role T4 = {6;7}
+let role A1 = {8;9}
+let role A2 = {10;11}
+let role A3 = {12;13}
+let role A4 = {14;15}
+let role S12 = {16;17}
+let role S34 = {18;19}
+
+let edges = {
+  T1=A1;
+  T2=A2;
+  T3=A3;
+  T4=A4;
+  S12=8;
+  S12=10;
+  S12=12;
+  S12=14;
+  S34=9;
+  S34=11;
+  S34=13;
+  S34=15;
+}

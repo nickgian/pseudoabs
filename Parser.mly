@@ -40,10 +40,13 @@ nodes:
     | NUM SEMI nodes        { (snd $1) :: $3 }
 ;
 
+vertex:
+  | NUM { Num (snd $1) }
+  | ID  { Role (snd $1) }
 
 edge:
-    | NUM SUB NUM SEMI                  { [(snd $1, snd $3)] }
-    | NUM EQ NUM SEMI                   { [(snd $1, snd $3); (snd $3, snd $1)] }
+    | vertex SUB vertex SEMI                  { [($1, $3)] }
+    | vertex EQ vertex SEMI                   { [($1, $3); ($3, $1)] }
 ;
 
 edges:

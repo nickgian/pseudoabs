@@ -11,7 +11,7 @@ open Vertex
    
 type result = Yes | No of failureSet * routingMap
                         
-let pathToGroupId f (path: Vertex.t list) : key list =
+let pathToGroupId f (path: Vertex.t list) : abstrId list =
   List.map (fun v -> getGroupId f (getGroup f v)) path
   
 let getReachability (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : result =
@@ -37,7 +37,7 @@ let getReachability (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : 
 let findOptimalFailure (f: abstractionMap) (failedHat : EdgeSet.t)
                        (sol : routingMap) : Vertex.t =
   let candidate1 =
-    EdgeSet.filter (fun (u,v) -> (AbstractNode.cardinal (getGroupById f (vid u))) > 1)
+    EdgeSet.filter (fun (u,v) -> (AbstractNode.cardinal (getGroupById f (u.vid))) > 1)
                    failedHat in
   let candidate2 =
     EdgeSet.filter (fun (u,v) -> (VertexMap.mem u sol)
@@ -64,25 +64,29 @@ let mapFailedSet (g: Graph.t) (f: abstractionMap) (failed: failureSet) : failure
 
 let abstractionLoop_debug =
   let iterationNumber = ref 0 in
-  fun (f: abstractionMap) (failed: EdgeSet.t)->
+  fun (f: abstractionMap) (failed: EdgeSet.t option)->
   if !(Debug.debugAbstractionLoop) then
     begin
       let groups = printAbstractGroups f "\n" in
       incr iterationNumber;
       show_message (string_of_int !iterationNumber) T.Blue "Iteration Number ";
-      show_message (printEdges failed "\n") T.Blue "Failed Edges";
+      (match failed with
+      | None -> ()
+      | Some failed -> show_message (printEdges failed "\n") T.Blue "Failed Edges");
       show_message groups T.Blue "Abstract groups";
     end
   
 let abstractionLoop (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : result =
   let rec loop (f: abstractionMap) =
     let ag = buildAbstractGraph g f in
-    match getReachability ag (getId f s, vname s) (getId f d, vname d) failures with
-    | Yes -> Yes
+    let shat = {vid=getId f s; vname=None} in
+    let dhat = {vid=getId f d; vname= None} in
+    match getReachability ag shat dhat failures with
+    | Yes -> abstractionLoop_debug f None; Yes
     | No (failed, sol) ->
        let concreteFailures = mapFailedSet g f failed in
        let numberOfFailures = EdgeSet.cardinal concreteFailures in
-       abstractionLoop_debug f concreteFailures;
+       abstractionLoop_debug f (Some concreteFailures);
        if (numberOfFailures <= 1) then (* simple case*)
          No (concreteFailures, sol)
        else 
@@ -90,7 +94,7 @@ let abstractionLoop (g: Graph.t) (s: Vertex.t) (d: Vertex.t) (failures: bool) : 
            (* refine abstraction and try again *)
            let uhat = findOptimalFailure f failed sol in
            let upath = pathOfRouting sol uhat in
-           let f' = refineForFailures g f uhat upath in
+           let f' = refineForFailures g f uhat.vid (List.map (fun u -> u.vid) upath) in
            loop f'
          end
   in
